@@ -1,4 +1,5 @@
 // console.log("server is running.")
+
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -23,7 +24,8 @@ const app = express();
 const PORT = process.env.PORT || 5000; //5000 is the default port number
 
 //Middleware-function 
-app.use(express.json());  //to parse req.body -> user.model.js
+app.use(express.json({limit:"5mb"}));  //to parse req.body -> user.model.js
+//limit: "5mb" -> shouldn't be too high to prevent DOS attack
 app.use(express.urlencoded({ extended: true })) // to parse form data (urlencoded) with postman
 app.use(cookieParser()); //to parse the cookie
 
