@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 const Posts = ({ feedType, username, userId }) => {
 	// const isLoading = false;
 
-	// There are 3 endpoints for posts
+	// There are 4 endpoints for posts
 	const getPostEndpoint = () => {
 		switch (feedType) {
 			case "forYou":

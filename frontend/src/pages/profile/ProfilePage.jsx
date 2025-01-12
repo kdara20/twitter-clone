@@ -11,10 +11,11 @@ import { FaArrowLeft } from "react-icons/fa6";
 import { IoCalendarOutline } from "react-icons/io5";
 import { FaLink } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatMemberSinceDate } from "../../utils/date";
 
-// import useFollow from "../../hooks/useFollow";
+import useFollow from "../../hooks/useFollow";
+import { toast } from "react-hot-toast";
 
 const ProfilePage = () => {
 	// Use the querykey to refer to the query later
@@ -28,8 +29,10 @@ const ProfilePage = () => {
 
 	// Use the username, call from app.jsx Route path='/profile/:username'
 	const { username } = useParams();
-	// const { follow, isPending } = useFollow();
-	// const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+	const { follow, isPending } = useFollow(); // Custom hook to follow users
+	// Get the authUser(client) from the query
+	const queryClient = useQueryClient();
+	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
 
 	// const isLoading = false;
 
@@ -54,9 +57,46 @@ const ProfilePage = () => {
 		},
 	});
 
-	const isMyProfile = true;
+	const { mutate: updateProfile, isPending: isUpatingProfile } = useMutation({
+		mutationFn: async () => {
+			try {
+				const res = await fetch(`/api/users/update`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						coverImg,
+						profileImg,
+					}),
+				});
+				const data = await res.json();
+				if (!res.ok) {
+					throw new Error(data.error || "Something went wrong");
+				}
+				return data;
+			} catch (error) {
+				throw new Error(error.message);
+			}
+		},
+		onSuccess: () => {
+			toast.success("Profile updated successfully");
+			// validate both queries for Client (Authuser) and user profile
+			Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["authUser"] }),
+				queryClient.invalidateQueries({ queryKey: ["userProfile"] }),
+			]);
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
+	// const isMyProfile = true;
+	const isMyProfile = authUser?._id === user?._id;
 
 	const memberSinceDate = formatMemberSinceDate(user?.createdAt);
+	const amIFollowing = authUser?.following.includes(user?._id);
 
 	//Hardcoded user data
 
@@ -162,21 +202,24 @@ const ProfilePage = () => {
 								</div>
 							</div>
 							<div className="flex justify-end px-4 mt-5">
-								{isMyProfile && <EditProfileModal />}
+								{isMyProfile && <EditProfileModal authUser={authUser} />}
 								{!isMyProfile && (
 									<button
 										className="btn btn-outline rounded-full btn-sm"
-										onClick={() => alert("Followed successfully")}
+										onClick={() => follow(user?._id)}
+										//alert("Followed successfully")
 									>
-										Follow
+										{isPending && "Loading..."}
+										{!isPending && amIFollowing && "Unfollow"}
+										{!isPending && !amIFollowing && "Follow"}
 									</button>
 								)}
 								{(coverImg || profileImg) && (
 									<button
 										className="btn btn-primary rounded-full btn-sm text-white px-4 ml-2"
-										onClick={() => alert("Profile updated successfully")}
+										onClick={() => updateProfile()}
 									>
-										Update
+										{isUpatingProfile ? "Updating..." : "Update"}
 									</button>
 								)}
 							</div>
