@@ -1,5 +1,5 @@
 // console.log("server is running.")
-
+import path from "path";
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -15,24 +15,33 @@ dotenv.config(); //read the value of process.env.MONGO_URI
 // Connect to cloudinary account, using to upload images
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 const app = express();
 const PORT = process.env.PORT || 5000; //5000 is the default port number
+const __dirname = path.resolve(); //to get the current directory
 
-//Middleware-function 
-app.use(express.json({limit:"5mb"}));  //to parse req.body -> user.model.js
+//Middleware-function
+app.use(express.json({ limit: "5mb" })); //to parse req.body -> user.model.js
 //limit: "5mb" -> shouldn't be too high to prevent DOS attack
-app.use(express.urlencoded({ extended: true })) // to parse form data (urlencoded) with postman
+app.use(express.urlencoded({ extended: true })); // to parse form data (urlencoded) with postman
 app.use(cookieParser()); //to parse the cookie
 
 app.use("/api/auth", authRoutes); //middleware
 app.use("/api/users", userRoutes); //middleware
 app.use("/api/posts", PostRoutes); //middleware
 app.use("/api/notifications", notificationRoutes);
+
+if (process.env.NODE_ENV === "production") {
+	app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+	app.get("*", (req, res) => {
+		res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
+	});
+}
 
 //1st part using get method
 // app.get("/", (req, res) => {
@@ -42,10 +51,8 @@ app.use("/api/notifications", notificationRoutes);
 //2nd demo of dotenv
 // console.log(process.env.MONGO_URI); //undefined without importing dotenv
 
-
-
 app.listen(PORT, () => {
-  // 5000 is the port number
-  console.log(`server is running on port ${PORT}`);
-  connectMongoDB(); //connect to mongoDB
+	// 5000 is the port number
+	console.log(`server is running on port ${PORT}`);
+	connectMongoDB(); //connect to mongoDB
 });
